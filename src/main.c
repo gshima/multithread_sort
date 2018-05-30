@@ -8,7 +8,7 @@
  #include <time.h>
  #include <pthread.h>
 
- #define MAX_WORKERS 2
+ #define MAX_WORKERS 1
  #define ATIVO 1
  #define INATIVO 0
  #define MAX_ELEMENTOS 200000
@@ -31,6 +31,7 @@ int vetor[MAX_ELEMENTOS];
 
  void* worker(void *arg) {
    thread_args *info = (thread_args *)arg;
+   //printf("Olar, worker_id = %d\n", info->ID);
    quicksort(info->indice_inicio_esquerda, info->indice_fim_esquerda);
    quicksort(info->indice_inicio_direita, info->indice_fim_direita);
    pthread_mutex_lock(&trava);
@@ -70,7 +71,6 @@ void quicksort(int primeiro, int ultimo) {
     vetor[pivo] = vetor[j];
     vetor[j] = temp;
     if (n_workers >= MAX_WORKERS) {
-      //printf("Muitas tarefas sendo executadas. Ingnorando entrada\n");
       quicksort(primeiro, j-1);
       quicksort(j+1, ultimo);
     } else {
@@ -87,8 +87,9 @@ void quicksort(int primeiro, int ultimo) {
       send_args->ID = k;
       worker_status[k] = ATIVO;
       n_workers += 1;
-      //printf("Threads ativas: %d de %d\n", n_workers, MAX_WORKERS);
-      pthread_create(& (workers[j]), NULL, worker, (void*) send_args);
+      // printf("Threads ativas: %d de %d\n", n_workers, MAX_WORKERS);
+      int a = pthread_create(& (workers[k]), NULL, worker, (void*) send_args);
+      // printf("phtread_cerate = %d\n", a);
       pthread_mutex_unlock(&trava);
     }
   }
@@ -105,6 +106,16 @@ int main() {
   }while ( getchar() != '\n' );
 
   quicksort(0, qtde_elementos-1);
+
+  /* Esperando threads */
+  //  printf("Terminando programa. Esperando threads terminarem...\n");
+  for (int i=0; i<MAX_WORKERS; i++) {
+    if (worker_status[i]==ATIVO) {
+      pthread_join(workers[i], NULL);
+    }
+  }
+  //printf("FIM!\n");
+
 
   for(int i = 0; i < qtde_elementos; ++i) {
     printf("%d", vetor[i]);
